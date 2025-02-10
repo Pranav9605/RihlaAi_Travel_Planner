@@ -32,6 +32,8 @@ def generate_response(travel_data: dict) -> str:
         travel_group = travel_data.get("travel_group", "an unspecified group")
         activities = travel_data.get("activities", [])
         activities_str = ", ".join(activities) if activities else "unspecified activities"
+        additional_comments = travel_data.get("additional_comments", "")
+
         
         # Construct a detailed prompt for the Gemini API
         prompt = (
@@ -43,6 +45,7 @@ def generate_response(travel_data: dict) -> str:
             f"Number of People: {num_people}\n"
             f"Travel Group: {travel_group}\n"
             f"Activities: {activities_str}\n"
+            f"Additional Comments: {additional_comments}\n"
         )
         
         # Retrieve additional context if needed

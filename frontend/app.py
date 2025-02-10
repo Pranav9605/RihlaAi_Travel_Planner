@@ -1,13 +1,8 @@
 import streamlit as st
 import requests
 
-import streamlit as st
-
-
-
 st.title("RihlaAi: Your AI-Powered Passport to Arabia")
 
-# Define the form for travel preferences
 with st.form("travel_preferences_form"):
     destination = st.text_input("Destination")
     travel_date = st.date_input("Travel Date (start)")
@@ -19,37 +14,38 @@ with st.form("travel_preferences_form"):
         "Interested Activities", 
         ["Beaches", "City Exploration", "Nightlife", "Food Tours", "Events"]
     )
-    # Submit button inside the form
+    additional_comments = st.text_area("Additional Comments", 
+                                       placeholder="Enter any extra notes or preferences here...")
     submitted = st.form_submit_button("Submit")
 
-# This block runs only after the user submits the form
 if submitted:
-    # Construct the query payload as a dictionary
     query_data = {
         "destination": destination,
-        "travel_date": str(travel_date),  # Convert date to string for JSON serialization
+        "travel_date": str(travel_date),
         "num_days": num_days,
         "budget": budget,
         "num_people": num_people,
         "travel_group": travel_group,
-        "activities": activities
+        "activities": activities,
+        "additional_comments": additional_comments  # Include additional comments in the payload.
     }
     
-    # Optionally, display the payload for debugging
-    st.write("Payload to be sent to backend:", query_data)
+    # st.write("Payload to be sent to backend:", query_data)
 
-    # Make a POST request to the FastAPI backend
     with st.spinner("Fetching travel recommendations..."):
         try:
             response = requests.post("http://localhost:8000/search/", json=query_data)
-            # Check if the response status is OK
             if response.status_code == 200:
                 data = response.json()
-                if "response" in data:
-                    st.success("Travel Recommendations:")
-                    st.write(data["response"])
-                else:
-                    st.error("Error: 'response' key not found in the response data.")
+                
+                # st.subheader("Itinerary:")
+                # st.write(data.get("itinerary", "No itinerary returned."))
+                
+                # st.subheader("Augmented Data (Keywords with Images & Links):")
+                # st.json(data.get("augmented", {}))
+                
+                st.subheader("Itinerary:")
+                st.markdown(data.get("rendered_output", ""), unsafe_allow_html=True)
             else:
                 st.error(f"Error: Received status code {response.status_code}\n{response.text}")
         except Exception as e:
