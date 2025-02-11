@@ -1,8 +1,14 @@
 import google.generativeai as genai
 from backend.retrieval import retrieve_relevant_docs
-from backend.config import GEMINI_API_KEY
+# from backend.config import GEMINI_API_KEY
 import logging
 import traceback
+from decouple import config
+
+
+# Load environment variables from a .env file
+
+GEMINI_API_KEY = config('GEMINI_API_KEY')
 
 # Configure the Gemini client with API key
 genai.configure(api_key=GEMINI_API_KEY)
