@@ -1,0 +1,10 @@
+fastapi 
+uvicorn 
+openai 
+langchain
+chromadb 
+sentence-transformers
+spacy
+requests
+prophet
+python-decouple
