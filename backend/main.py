@@ -3,7 +3,7 @@ from pydantic import BaseModel
 from typing import List, Dict, Any
 import logging
 import spacy
-
+from backend.weather_forecast import router as weather_router
 # Import your LLM integration function and image scraper module.
 from backend.llm_integration import generate_response
 from backend.duckduckgo_scraper import scrape_duckduckgo_image
@@ -68,6 +68,7 @@ def dynamic_format_itinerary(plan_text: str, augmented_items: List[Dict[str, str
     return "\n\n".join(formatted_lines)
 
 app = FastAPI()
+app.include_router(weather_router)
 
 @app.get("/")
 def home():
