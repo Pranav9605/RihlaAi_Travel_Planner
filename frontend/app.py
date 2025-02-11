@@ -34,7 +34,7 @@ if submitted:
         "activities": activities,
         "additional_comments": additional_comments
     }
-    st.write("Payload to be sent to backend:", query_data)
+    # st.write("Payload to be sent to backend:", query_data)
     
     # Prepare forecast payload.
     # Convert travel_date to a datetime string with default time "00:00:00".

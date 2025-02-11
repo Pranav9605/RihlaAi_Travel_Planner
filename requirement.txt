@@ -8,3 +8,4 @@ spacy
 requests
 prophet
 python-decouple
+google-generativeai
