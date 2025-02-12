@@ -3,7 +3,9 @@ from pydantic import BaseModel
 from typing import List, Dict, Any
 import logging
 import spacy
-from backend.weather_forecast import router as weather_router
+import traceback
+# import google.generativeai as genai
+import openai
 # Import your LLM integration function and image scraper module.
 from backend.llm_integration import generate_response
 from backend.duckduckgo_scraper import scrape_duckduckgo_image
@@ -11,7 +13,15 @@ from backend.duckduckgo_scraper import scrape_duckduckgo_image
 # Configure basic logging.
 logging.basicConfig(level=logging.DEBUG)
 
-# Pydantic model for the travel query input.
+# Configure the Gemini client with API key.
+# from backend.config import OPENAI_API_KEY
+# genai.configure(api_key=OPENAI_API_KEY)
+
+
+from backend.config import OPENAI_API_KEY
+
+
+# Pydantic model for travel query.
 class TravelQuery(BaseModel):
     destination: str
     travel_date: str
@@ -28,7 +38,7 @@ nlp = spacy.load("en_core_web_sm")
 def extract_keywords(text: str) -> List[str]:
     """
     Extract keywords (e.g., place names) from text using spaCy NER.
-    Here we extract entities labeled as GPE, LOC, or ORG.
+    Extracts entities labeled as GPE, LOC, or ORG.
     """
     doc = nlp(text)
     keywords = [ent.text for ent in doc.ents if ent.label_ in ("GPE", "LOC", "ORG")]
@@ -37,23 +47,19 @@ def extract_keywords(text: str) -> List[str]:
 def dynamic_format_itinerary(plan_text: str, augmented_items: List[Dict[str, str]]) -> str:
     """
     Dynamically format the itinerary text into Markdown.
-    The function splits the text into lines and, for each line,
-    appends an image snippet and hyperlink if a keyword is found and not already rendered.
+    Splits text into lines and appends an image snippet with hyperlink for any keyword found,
+    ensuring each keyword is rendered only once.
     """
-    # Split the itinerary text into lines for better segmentation.
     lines = plan_text.splitlines()
     formatted_lines = []
-    rendered_keywords = set()  # Track keywords already rendered.
-    
+    rendered_keywords = set()
+
     for line in lines:
         stripped_line = line.strip()
         if not stripped_line:
             continue
-        
-        # Add the original line.
+
         formatted_lines.append(stripped_line)
-        
-        # For each augmented item, if its keyword appears and hasn't been rendered, append its snippet.
         for item in augmented_items:
             keyword = item["keyword"].lower()
             if keyword in stripped_line.lower() and keyword not in rendered_keywords:
@@ -63,12 +69,10 @@ def dynamic_format_itinerary(plan_text: str, augmented_items: List[Dict[str, str
                 )
                 formatted_lines.append(snippet)
                 rendered_keywords.add(keyword)
-    
-    # Join with double newlines for clear Markdown separation.
+
     return "\n\n".join(formatted_lines)
 
-app = FastAPI()
-app.include_router(weather_router)
+app = FastAPI(title="RihlaAi Travel & Weather Planner API")
 
 @app.get("/")
 def home():
@@ -79,25 +83,20 @@ def search(travel_query: TravelQuery):
     try:
         travel_data = travel_query.dict()
         logging.debug("Received travel data: %s", travel_data)
-        
-        # Generate itinerary text using your LLM integration.
+
         itinerary_text = generate_response(travel_data)
         logging.debug("Generated itinerary text: %s", itinerary_text)
-        
-        # Extract keywords from the itinerary.
+
         extracted_keywords = extract_keywords(itinerary_text)
         logging.debug("Extracted keywords (raw): %s", extracted_keywords)
-        
-        # Filter out the destination to avoid repeating images for the city itself.
+
         destination_lower = travel_data.get("destination", "").lower()
         filtered_keywords = [kw for kw in extracted_keywords if kw.lower() != destination_lower]
         logging.debug("Filtered keywords (excluding destination): %s", filtered_keywords)
-        
+
         augmented_items = []
         for keyword in filtered_keywords:
-            # Retrieve one image URL per keyword via the DuckDuckGo scraper.
             image_url = scrape_duckduckgo_image(keyword)
-            # Create a hyperlink (for example, a Google search link).
             more_info_link = f"https://www.google.com/search?q={keyword.replace(' ', '+')}"
             augmented_items.append({
                 "keyword": keyword,
@@ -105,8 +104,7 @@ def search(travel_query: TravelQuery):
                 "more_info_link": more_info_link
             })
         logging.debug("Raw augmented items: %s", augmented_items)
-        
-        # Deduplicate augmented items by keyword (case-insensitive).
+
         unique_augmented = {}
         for item in augmented_items:
             key = item["keyword"].lower()
@@ -114,11 +112,10 @@ def search(travel_query: TravelQuery):
                 unique_augmented[key] = item
         augmented_items = list(unique_augmented.values())
         logging.debug("Deduplicated augmented items: %s", augmented_items)
-        
-        # Dynamically format the itinerary text to include images and links.
+
         rendered_html = dynamic_format_itinerary(itinerary_text, augmented_items)
         logging.debug("Rendered HTML output: %s", rendered_html)
-        
+
         return {
             "query": travel_data,
             "itinerary": itinerary_text,
@@ -129,10 +126,10 @@ def search(travel_query: TravelQuery):
         logging.exception("Error processing travel query")
         raise HTTPException(status_code=500, detail=str(e))
 
+# Include the weather forecast router.
+from backend.weather_forecast import router as weather_router
+app.include_router(weather_router)
+
 if __name__ == "__main__":
-    import os
     import uvicorn
-
-    port = int(os.environ.get("PORT", 8000))
-    uvicorn.run(app, host="0.0.0.0", port=port)
-
+    uvicorn.run(app, host="0.0.0.0", port=8000)

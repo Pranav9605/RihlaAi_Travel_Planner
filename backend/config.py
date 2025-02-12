@@ -1,3 +1,5 @@
 # import google.generativeai as genai
 
-# GEMINI_API_KEY='AIzaSyDP2ZZqWXB7fgLWfc4WSySYel_ItNXJftg'
+# GEMINI_API_KEY='AIzaSyC9PfYmrfhoeMjANhLPW4mzWDJVpxLoMXc'
+OPENAI_API_KEY = "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"
+DEBUG = True

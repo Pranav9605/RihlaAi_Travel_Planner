@@ -1,2 +1,4 @@
 .env
 /opt/anaconda3/envs/mlx-env/
+venv/
+.conda/
